@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>業務内容</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:#2c5f8a; --primary-lt:#3a7abf; --accent:#e8a020; --accent-lt:#f5c050;
+      --bg:#f0f4f8; --card:#ffffff; --border:#ccd8e4; --text:#2d3748;
+      --text-sub:#718096; --danger:#e53e3e; --success:#38a169; --radius:10px;
+      --shadow:0 2px 12px rgba(44,95,138,.12);
+    }
+    body { font-family:"Meiryo UI","メイリオ","Yu Gothic UI",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    main { max-width:1400px; margin:0 auto; padding:18px 16px; }
+    .section-card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 20px; margin-bottom:18px; border:1px solid var(--border); }
+    .section-title { font-size:.95rem; font-weight:700; color:var(--primary); border-left:4px solid var(--primary); padding-left:10px; margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+
+    /* ローディング */
+    .loading-bar { text-align:center; padding:30px; color:var(--text-sub); font-size:.9rem; }
+    .spinner-sm  { display:inline-block; width:18px; height:18px; border:3px solid #c5d5f5; border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .order-folder-btn { background:var(--accent); color:#fff; border:none; border-radius:5px; padding:3px 10px; font-family:inherit; font-size:.74rem; font-weight:700; cursor:pointer; transition:background .15s; white-space:nowrap; }
+    .order-folder-btn:hover { background:var(--accent-lt); }
+
+    /* アイコンボタン */
+    .row-action-cell { display:flex; gap:4px; align-items:center; justify-content:center; }
+    .btn-icon-only { border:none; border-radius:5px; width:30px; height:30px; font-size:1rem; cursor:pointer; transition:background .15s,transform .1s; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; }
+    .btn-icon-only:hover  { transform:scale(1.12); }
+    .btn-icon-only:active { transform:scale(.95); }
+    .btn-del-ico  { background:#fed7d7; color:var(--danger); }
+    .btn-del-ico:hover  { background:var(--danger); color:#fff; }
+    .btn-edit-ico { background:#e9f2fb; color:var(--primary); }
+    .btn-edit-ico:hover { background:var(--primary); color:#fff; }
+    .btn-save-ico { background:#c6f6d5; color:var(--success); }
+    .btn-save-ico:hover { background:var(--success); color:#fff; }
+
+    /* 連絡事項 */
+    .notice-table-wrap { overflow-x:auto; }
+    .notice-table { width:100%; border-collapse:collapse; font-size:1rem; }
+    .notice-table th { background:var(--primary); color:#fff; padding:9px 11px; text-align:center; font-weight:600; white-space:nowrap; font-size:.95rem; }
+    .notice-table td { padding:7px 9px; border:1px solid var(--border); vertical-align:middle; }
+    .notice-table tr:nth-child(even) td { background:#f7fafc; }
+    .notice-table tr:hover td { background:#ebf4ff; }
+    .view-date { font-size:.95rem; text-align:center; white-space:nowrap; font-weight:600; color:var(--primary); }
+    .content-cell { display:flex; align-items:flex-start; gap:10px; }
+    .attach-indicator { font-size:1.4rem; cursor:pointer; flex-shrink:0; margin-top:2px; transition:transform .15s; line-height:1; position:relative; }
+    .attach-indicator:hover { transform:scale(1.2); }
+    .attach-count-badge { position:absolute; top:-4px; right:-6px; background:var(--accent); color:#fff; font-size:.6rem; font-weight:700; border-radius:8px; padding:0 4px; min-width:14px; text-align:center; line-height:14px; }
+    .content-text-wrap { flex:1; min-width:0; }
+    .view-content { font-size:1rem; white-space:pre-wrap; word-break:break-all; line-height:1.55; }
+    .notice-table input[type="date"],
+    .notice-table input[type="text"],
+    .notice-table textarea { width:100%; border:1px solid var(--border); border-radius:5px; padding:6px 8px; font-family:inherit; font-size:.95rem; color:var(--text); background:#fff; transition:border-color .2s; }
+    .notice-table input:focus, .notice-table textarea:focus { outline:none; border-color:var(--primary-lt); box-shadow:0 0 0 3px rgba(58,122,191,.15); }
+    .notice-table textarea { resize:vertical; min-height:42px; }
+    .check-cell { text-align:center; }
+    .teacher-check-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .teacher-check-wrap label { font-size:.7rem; color:var(--text-sub); white-space:nowrap; }
+    .teacher-check-wrap input[type="checkbox"] { width:16px; height:16px; cursor:pointer; accent-color:var(--success); }
+
+    /* 添付（編集） */
+    .attach-area { margin-top:6px; }
+    .attach-btn { background:#edf2f7; color:var(--primary); border:1px solid var(--border); border-radius:5px; padding:3px 9px; font-size:.76rem; font-family:inherit; cursor:pointer; transition:background .15s; }
+    .attach-btn:hover { background:#e2e8f0; }
+    .attach-file-input { display:none; }
+    .attach-file-list-edit { margin-top:5px; display:flex; flex-wrap:wrap; gap:5px; }
+    .attach-chip-edit { display:inline-flex; align-items:center; gap:4px; background:#ebf4ff; border:1px solid #bee3f8; border-radius:20px; padding:3px 8px 3px 7px; font-size:.75rem; color:var(--primary); max-width:220px; }
+    .attach-chip-edit-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; }
+    .attach-chip-del { background:none; border:none; color:var(--danger); font-size:.8rem; cursor:pointer; padding:0; line-height:1; flex-shrink:0; }
+
+    /* 添付ポップアップ */
+    .attach-popup { display:none; position:fixed; background:#fff; border:1.5px solid var(--border); border-radius:10px; box-shadow:0 6px 24px rgba(44,95,138,.22); z-index:400; min-width:180px; max-width:280px; overflow:hidden; animation:popIn .13s ease; }
+    @keyframes popIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+    .attach-popup.open { display:block; }
+    .attach-popup-header { background:var(--primary); color:#fff; font-size:.76rem; font-weight:700; padding:7px 12px; }
+    .attach-popup-item { display:flex; align-items:center; gap:8px; padding:9px 13px; font-size:.87rem; color:var(--text); cursor:pointer; border-bottom:1px solid #edf2f7; transition:background .12s; overflow:hidden; }
+    .attach-popup-item:last-child { border-bottom:none; }
+    .attach-popup-item:hover { background:#ebf4ff; color:var(--primary); }
+    .attach-popup-item-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+
+    .add-row-btn { border:none; border-radius:6px; padding:5px 12px; font-family:inherit; font-size:.8rem; cursor:pointer; background:var(--primary); color:#fff; margin-top:9px; transition:background .15s; }
+    .add-row-btn:hover { background:var(--primary-lt); }
+
+    /* 不足テキスト */
+    .shortage-table { width:100%; border-collapse:collapse; font-size:.87rem; }
+    .shortage-table th { background:#edf2f7; color:var(--primary); padding:7px 9px; text-align:center; border:1px solid var(--border); font-weight:700; }
+    .shortage-table td { padding:6px 7px; border:1px solid var(--border); vertical-align:middle; }
+    .shortage-table tr:nth-child(even) td { background:#f7fafc; }
+    .shortage-table .view-val { font-size:.85rem; }
+    .shortage-table input { width:100%; border:1px solid var(--border); border-radius:4px; padding:4px 6px; font-family:inherit; font-size:.84rem; color:var(--text); }
+    .shortage-table input:focus { outline:none; border-color:var(--primary-lt); }
+
+    /* タスク */
+    .task-table { width:100%; border-collapse:collapse; font-size:.87rem; }
+    .task-table th { background:#edf2f7; color:var(--primary); padding:7px 9px; text-align:center; border:1px solid var(--border); font-weight:700; }
+    .task-table td { padding:6px 7px; border:1px solid var(--border); vertical-align:middle; }
+    .task-table tr:nth-child(even) td { background:#f7fafc; }
+    .task-table .view-val { font-size:.85rem; }
+    .task-table input { width:100%; border:1px solid var(--border); border-radius:4px; padding:4px 6px; font-family:inherit; font-size:.84rem; color:var(--text); }
+    .task-table input:focus { outline:none; border-color:var(--primary-lt); }
+    .task-done { text-align:center; }
+    .task-done input[type="checkbox"] { width:17px; height:17px; accent-color:var(--success); cursor:pointer; }
+    tr.task-completed td { text-decoration:line-through; color:var(--text-sub); background:#f0fff4 !important; }
+
+    .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    @media(max-width:900px){.bottom-grid{grid-template-columns:1fr}}
+
+    /* プレビュー全画面 */
+    .preview-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.82); z-index:500; align-items:center; justify-content:center; padding:12px; }
+    .preview-overlay.open { display:flex; }
+    .preview-modal { background:#fff; border-radius:10px; width:100%; height:100%; max-width:calc(100vw - 24px); max-height:calc(100vh - 24px); display:flex; flex-direction:column; box-shadow:0 8px 40px rgba(0,0,0,.5); animation:pIn .16s ease; overflow:hidden; }
+    @keyframes pIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+    .preview-modal-header { background:var(--primary); color:#fff; padding:11px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-shrink:0; }
+    .preview-modal-title { font-size:.9rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .preview-close { background:rgba(255,255,255,.2); border:none; color:#fff; font-size:1.1rem; width:30px; height:30px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s; }
+    .preview-close:hover { background:rgba(255,255,255,.4); }
+    .preview-modal-body { flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#111827; }
+    .preview-modal-body img { max-width:100%; max-height:100%; object-fit:contain; display:block; }
+    .preview-modal-body iframe { width:100%; height:100%; border:none; background:#fff; }
+    .preview-unsupported { color:#ccc; text-align:center; padding:40px 20px; font-size:.9rem; line-height:1.8; }
+    .preview-unsupported a { color:#90caf9; text-decoration:underline; }
+  </style>
+</head>
+<body>
+<main>
+  <section class="section-card">
+    <div class="section-title">📢 連絡事項</div>
+    <div class="notice-table-wrap">
+      <table class="notice-table">
+        <thead id="notice-thead"></thead>
+        <tbody id="notice-tbody"><tr><td colspan="10"><div class="loading-bar"><span class="spinner-sm"></span>読み込み中...</div></td></tr></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn" onclick="addNoticeRow()">＋ 行を追加</button>
+  </section>
+
+  <div class="bottom-grid">
+    <section class="section-card">
+      <div class="section-title">
+        📦 不足テキスト一覧
+        <button class="order-folder-btn" onclick="openOrderFolder()">📂 発注データ</button>
+      </div>
+      <table class="shortage-table">
+        <thead><tr><th style="width:68px"></th><th style="width:100px">納品予定日</th><th>テキスト名</th><th style="width:72px">納品数</th></tr></thead>
+        <tbody id="shortage-tbody"><tr><td colspan="4"><div class="loading-bar"><span class="spinner-sm"></span>読み込み中...</div></td></tr></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addShortageRow()">＋ 行を追加</button>
+    </section>
+    <section class="section-card">
+      <div class="section-title">✅ やってほしいタスク一覧</div>
+      <table class="task-table">
+        <thead><tr><th style="width:68px"></th><th style="width:100px">期日</th><th>項目</th><th style="width:50px">完了</th></tr></thead>
+        <tbody id="task-tbody"><tr><td colspan="4"><div class="loading-bar"><span class="spinner-sm"></span>読み込み中...</div></td></tr></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addTaskRow()">＋ 行を追加</button>
+    </section>
+  </div>
+</main>
+
+<!-- 添付ポップアップ -->
+<div class="attach-popup" id="attach-popup">
+  <div class="attach-popup-header">📎 ファイルを選択</div>
+  <div id="attach-popup-list"></div>
+</div>
+
+<!-- プレビューモーダル -->
+<div class="preview-overlay" id="preview-overlay">
+  <div class="preview-modal">
+    <div class="preview-modal-header">
+      <span class="preview-modal-title" id="preview-title"></span>
+      <button class="preview-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="preview-modal-body" id="preview-body"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getFirestore, collection, doc,
+         onSnapshot, addDoc, updateDoc,
+         deleteDoc, serverTimestamp, query,
+         orderBy }         from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+import { getStorage, ref,
+         uploadBytes, getDownloadURL,
+         deleteObject }    from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
+
+/* ================================================
+   Firebase 初期化
+================================================ */
+const firebaseConfig = {
+  apiKey:            "AIzaSyDYQ-GiOKMXlluilrkn0_V07VlA-1Oi9oc",
+  authDomain:        "melife-part-time-data.firebaseapp.com",
+  projectId:         "melife-part-time-data",
+  storageBucket:     "melife-part-time-data.firebasestorage.app",
+  messagingSenderId: "516260260081",
+  appId:             "1:516260260081:web:7ec332ba2a4e8faaf5a150"
+};
+const app     = initializeApp(firebaseConfig);
+const db      = getFirestore(app);
+const storage = getStorage(app);
+
+/* ================================================
+   コレクション参照
+   notices   : 連絡事項
+   shortages : 不足テキスト
+   tasks     : タスク
+================================================ */
+const noticesCol   = collection(db, "notices");
+const shortagesCol = collection(db, "shortages");
+const tasksCol     = collection(db, "tasks");
+
+/* ================================================
+   設定（親 iframe から postMessage で受信）
+================================================ */
+let currentTeachers = [];
+
+window.addEventListener("message", e => {
+  if (e.data?.type === "config_updated") {
+    currentTeachers = (e.data.payload?.teachers || []).filter(t => t.name?.trim());
+    buildNoticeHeader();
+  }
+});
+
+/* ================================================
+   ユーティリティ
+================================================ */
+function escHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function todayString(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function formatDateShort(str){ if(!str)return ""; const p=str.split("-"); return p.length<3?str:`${parseInt(p[1])}/${parseInt(p[2])}`; }
+function getFileIcon(ext){ const m={pdf:"📄",png:"🖼",jpg:"🖼",jpeg:"🖼",gif:"🖼",webp:"🖼",svg:"🖼",bmp:"🖼",txt:"📝",csv:"📊",xlsx:"📊",xls:"📊",docx:"📝",doc:"📝",pptx:"📊",ppt:"📊",zip:"🗜",mp4:"🎬",mov:"🎬",mp3:"🎵"}; return m[ext]||"📎"; }
+
+function openOrderFolder(){ location.href="openfolder:"+encodeURIComponent("order_data"); }
+window.openOrderFolder = openOrderFolder;
+
+/* ================================================
+   添付ポップアップ
+================================================ */
+function openAttachPopup(indicatorEl, files) {
+  const popup = document.getElementById("attach-popup");
+  const list  = document.getElementById("attach-popup-list");
+  list.innerHTML = "";
+  files.forEach(f => {
+    const item = document.createElement("div");
+    item.className = "attach-popup-item";
+    item.innerHTML = `<span>${getFileIcon((f.name||"").split(".").pop().toLowerCase())}</span><span class="attach-popup-item-name" title="${escHtml(f.name)}">${escHtml(f.name)}</span>`;
+    item.addEventListener("click", () => { openPreview(f.name, f.url); closeAttachPopup(); });
+    list.appendChild(item);
+  });
+  const rect = indicatorEl.getBoundingClientRect();
+  popup.style.left = `${Math.min(rect.left, window.innerWidth-300)}px`;
+  popup.style.top  = `${rect.bottom+6}px`;
+  popup.classList.add("open");
+}
+function closeAttachPopup(){ document.getElementById("attach-popup").classList.remove("open"); }
+document.addEventListener("click", e => {
+  const p = document.getElementById("attach-popup");
+  if (!p.contains(e.target) && !e.target.closest(".attach-indicator")) closeAttachPopup();
+});
+
+/* ================================================
+   プレビュー
+================================================ */
+function openPreview(name, url) {
+  document.getElementById("preview-title").textContent = name;
+  const body = document.getElementById("preview-body");
+  body.innerHTML = "";
+  const ext  = (name.split(".").pop()||"").toLowerCase();
+  const imgExts = ["png","jpg","jpeg","gif","webp","bmp","svg"];
+  if (imgExts.includes(ext)) {
+    const img = document.createElement("img"); img.src=url; img.alt=name; body.appendChild(img);
+  } else if (ext==="pdf") {
+    const ifr = document.createElement("iframe"); ifr.src=url; ifr.title=name; body.appendChild(ifr);
+  } else {
+    const div = document.createElement("div"); div.className="preview-unsupported";
+    div.innerHTML=`📄 <strong>${escHtml(name)}</strong><br><br>このファイル形式はブラウザでプレビューできません。<br><a href="${escHtml(url)}" target="_blank">⬇ 新しいタブで開く / ダウンロード</a>`;
+    body.appendChild(div);
+  }
+  document.getElementById("preview-overlay").classList.add("open");
+}
+window.closePreview = function(){ document.getElementById("preview-overlay").classList.remove("open"); document.getElementById("preview-body").innerHTML=""; };
+document.getElementById("preview-overlay").addEventListener("click", function(e){ if(e.target===this) window.closePreview(); });
+
+/* ================================================
+   Storage: ファイルアップロード
+   パス: attachments/{コレクション名}/{docId}/{ファイル名}
+================================================ */
+async function uploadFile(colName, docId, file) {
+  const storageRef = ref(storage, `attachments/${colName}/${docId}/${file.name}`);
+  await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(storageRef);
+  return { name: file.name, path: storageRef.fullPath, url };
+}
+
+async function deleteFile(filePath) {
+  try { await deleteObject(ref(storage, filePath)); } catch {}
+}
+
+/* ================================================
+   行操作セル
+================================================ */
+function makeActionCell(isSave, saveHandler) {
+  if (isSave) return `<td style="text-align:center;white-space:nowrap;"><div class="row-action-cell"><button class="btn-icon-only btn-del-ico" onclick="handleDelRow(this)" title="削除">🗑</button><button class="btn-icon-only btn-save-ico" onclick="${saveHandler}(this)" title="保存">💾</button></div></td>`;
+  return `<td style="text-align:center;white-space:nowrap;"><div class="row-action-cell"><button class="btn-icon-only btn-del-ico" onclick="handleDelRow(this)" title="削除">🗑</button><button class="btn-icon-only btn-edit-ico" onclick="handleEditRow(this)" title="編集">✏</button></div></td>`;
+}
+
+/* ================================================
+   連絡事項ヘッダー
+================================================ */
+function buildNoticeHeader() {
+  let html = `<tr><th style="width:68px"></th><th style="width:72px">日付</th><th>内容</th>`;
+  currentTeachers.forEach(t => { html += `<th style="width:64px">${escHtml(t.name)}</th>`; });
+  html += `</tr>`;
+  document.getElementById("notice-thead").innerHTML = html;
+}
+
+/* ================================================
+   連絡事項 リアルタイム購読
+================================================ */
+let noticeUnsub = null;
+
+function subscribeNotices() {
+  if (noticeUnsub) noticeUnsub();
+  const q = query(noticesCol, orderBy("createdAt", "asc"));
+  noticeUnsub = onSnapshot(q, snap => {
+    const tbody = document.getElementById("notice-tbody");
+    tbody.innerHTML = "";
+    if (snap.empty) { addNoticeRow(); return; }
+    snap.forEach(d => renderNoticeRowView(tbody, d.id, d.data()));
+  }, err => console.error("notices:", err));
+}
+
+/* ===== 表示モード ===== */
+function renderNoticeRowView(tbody, docId, data) {
+  const tr  = document.createElement("tr");
+  tr.dataset.docId = docId;
+  tr.dataset.files = JSON.stringify(data.files || []);
+
+  const files = data.files || [];
+  let attachHTML = "";
+  if (files.length > 0) {
+    attachHTML = `<div class="attach-indicator" title="${files.length}件の添付ファイル"
+      onclick="onAttachIndicatorClick(event,this,'${docId}')">📎<span class="attach-count-badge">${files.length}</span></div>`;
+  }
+
+  let checksHTML = "";
+  currentTeachers.forEach((t, i) => {
+    const chk = data.checks && data.checks[i];
+    checksHTML += `<td class="check-cell"><div class="teacher-check-wrap">
+      <input type="checkbox" ${chk?"checked":""} onchange="updateNoticeCheck(this,'${docId}',${i})">
+    </div></td>`;
+  });
+
+  tr.innerHTML = `
+    ${makeActionCell(false,"")}
+    <td><div class="view-date">${escHtml(formatDateShort(data.date||""))}</div></td>
+    <td><div class="content-cell">${attachHTML}<div class="content-text-wrap"><div class="view-content">${escHtml(data.content||"")}</div></div></div></td>
+    ${checksHTML}`;
+  tbody.appendChild(tr);
+}
+
+/* 添付アイコンクリック */
+window.onAttachIndicatorClick = function(e, el, docId) {
+  e.stopPropagation();
+  const tr    = el.closest("tr");
+  const files = JSON.parse(tr.dataset.files || "[]");
+  if (files.length === 1) openPreview(files[0].name, files[0].url);
+  else openAttachPopup(el, files);
+};
+
+/* ===== チェック即時更新 ===== */
+window.updateNoticeCheck = async function(chk, docId, idx) {
+  const tr     = chk.closest("tr");
+  const checks = currentTeachers.map((_,i) => {
+    const inputs = tr.querySelectorAll("input[type=checkbox]");
+    return inputs[i]?.checked ?? false;
+  });
+  try { await updateDoc(doc(db, "notices", docId), { checks }); }
+  catch(e){ console.error(e); }
+};
+
+/* ===== 行追加（新規 Firestore ドキュメント） ===== */
+window.addNoticeRow = async function() {
+  const tbody = document.getElementById("notice-tbody");
+  const tr    = document.createElement("tr");
+  const today = todayString();
+  tr.dataset.docId = "__new__";
+  tr.dataset.files = "[]";
+  renderNoticeRowEditMode(tr, { date:today, content:"", checks:[], files:[] }, null);
+  tbody.appendChild(tr);
+  tr.querySelector("textarea")?.focus();
+};
+
+function renderNoticeRowEditMode(tr, data, docId) {
+  const files = data.files || [];
+  let checksHTML = "";
+  currentTeachers.forEach((t,i) => {
+    const chk = data.checks && data.checks[i];
+    checksHTML += `<td class="check-cell"><div class="teacher-check-wrap">
+      <input type="checkbox" ${chk?"checked":""}></div></td>`;
+  });
+  const chipsHTML = files.map((f,idx) =>
+    `<span class="attach-chip-edit">
+      <span class="attach-chip-edit-name" title="${escHtml(f.name)}">📎${escHtml(f.name)}</span>
+      <button class="attach-chip-del" onclick="removeAttachChip(this,${idx})" title="削除">✕</button>
+    </span>`
+  ).join("");
+
+  tr.innerHTML = `
+    ${makeActionCell(true,"handleSaveNoticeRow")}
+    <td><input type="date" value="${escHtml(data.date||todayString())}"></td>
+    <td>
+      <textarea rows="2">${escHtml(data.content||"")}</textarea>
+      <div class="attach-area">
+        <button class="attach-btn" onclick="triggerFileInput(this)">📎 ファイルを添付</button>
+        <input type="file" class="attach-file-input" multiple onchange="onFileChosen(this)">
+        <div class="attach-file-list-edit">${chipsHTML}</div>
+      </div>
+    </td>
+    ${checksHTML}`;
+  tr._tempFiles    = JSON.parse(JSON.stringify(files));
+  tr._removeFiles  = [];
+  tr.dataset.docId = docId || "__new__";
+}
+
+/* ===== ファイル選択（メモリに保持するだけ） ===== */
+window.triggerFileInput = function(btn){ btn.nextElementSibling.click(); };
+window.onFileChosen = function(input){
+  const tr = input.closest("tr");
+  if (!tr._tempFiles) tr._tempFiles = [];
+  if (!tr._newFiles)  tr._newFiles  = [];
+  Array.from(input.files).forEach(f => {
+    tr._tempFiles.push({ name:f.name, _file:f });
+    tr._newFiles.push(f);
+  });
+  refreshEditChips(tr);
+  input.value = "";
+};
+
+function refreshEditChips(tr) {
+  const div = tr.querySelector(".attach-file-list-edit");
+  if (!div) return;
+  div.innerHTML = (tr._tempFiles||[]).map((f,idx) =>
+    `<span class="attach-chip-edit">
+      <span class="attach-chip-edit-name" title="${escHtml(f.name)}">📎${escHtml(f.name)}</span>
+      <button class="attach-chip-del" onclick="removeAttachChip(this,${idx})" title="削除">✕</button>
+    </span>`
+  ).join("");
+}
+
+window.removeAttachChip = function(btn, idx) {
+  const tr = btn.closest("tr");
+  const f  = (tr._tempFiles||[])[idx];
+  /* 既存ファイル（pathあり）は削除リストへ */
+  if (f && f.path) {
+    if (!tr._removeFiles) tr._removeFiles = [];
+    tr._removeFiles.push(f.path);
+  }
+  (tr._tempFiles||[]).splice(idx,1);
+  refreshEditChips(tr);
+};
+
+/* ===== 保存（新規 or 更新） ===== */
+window.handleSaveNoticeRow = async function(btn) {
+  const tr      = btn.closest("tr");
+  const docId   = tr.dataset.docId;
+  const date    = tr.querySelector("input[type=date]")?.value || "";
+  const content = tr.querySelector("textarea")?.value || "";
+  const tds     = tr.querySelectorAll("td");
+  const checks  = currentTeachers.map((_,i) => tds[3+i]?.querySelector("input[type=checkbox]")?.checked??false);
+
+  btn.disabled = true; btn.textContent = "⏳";
+
+  /* 既存ファイルを削除 */
+  for (const path of (tr._removeFiles||[])) await deleteFile(path);
+
+  /* 新規ファイルをアップロード（docIdが新規の場合は先にドキュメント作成） */
+  let targetDocId = docId === "__new__" ? null : docId;
+  let existingFiles = (tr._tempFiles||[]).filter(f => f.url); /* すでにアップ済み */
+
+  if (!targetDocId) {
+    /* 先にドキュメントを作成してIDを確保 */
+    const newDoc = await addDoc(noticesCol, { date, content, checks, files:[], createdAt: serverTimestamp() });
+    targetDocId = newDoc.id;
+  }
+
+  /* 新規ファイルのアップロード */
+  const uploadedFiles = [];
+  for (const f of (tr._newFiles||[])) {
+    try {
+      const result = await uploadFile("notices", targetDocId, f);
+      uploadedFiles.push(result);
+    } catch(e){ console.error("upload error:", e); }
+  }
+
+  const allFiles = [...existingFiles, ...uploadedFiles];
+  await updateDoc(doc(db,"notices",targetDocId), { date, content, checks, files:allFiles });
+  /* onSnapshot が自動で再描画するので手動操作不要 */
+};
+
+/* ===== 編集ボタン ===== */
+window.handleEditRow = function(btn) {
+  const tr    = btn.closest("tr");
+  const tbody = tr.closest("tbody");
+  if (tbody.id === "notice-tbody") {
+    const files   = JSON.parse(tr.dataset.files || "[]");
+    const docId   = tr.dataset.docId;
+    const date    = (() => { try { return JSON.parse(tr.dataset.origDate||'""'); } catch{ return ""; } })() || tr.querySelector(".view-date")?.textContent.trim().replace(/(\d+)\/(\d+)/,(_, m,d)=>`${new Date().getFullYear()}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`)||"";
+    const content = tr.querySelector(".view-content")?.textContent || "";
+    const checks  = currentTeachers.map((_,i) => { const tds=tr.querySelectorAll("td"); return tds[3+i]?.querySelector("input[type=checkbox]")?.checked??false; });
+    renderNoticeRowEditMode(tr, { date, content, checks, files }, docId);
+    tr._newFiles = [];
+  } else if (tbody.id === "shortage-tbody") {
+    renderShortageRowEdit(tr, getShortageRowData(tr));
+  } else if (tbody.id === "task-tbody") {
+    renderTaskRowEdit(tr, getTaskRowData(tr));
+  }
+};
+
+/* ===== 行削除 ===== */
+window.handleDelRow = async function(btn) {
+  const tr    = btn.closest("tr");
+  const tbody = tr.closest("tbody");
+  const docId = tr.dataset.docId;
+  if (!docId || docId === "__new__") { tr.remove(); return; }
+
+  const colName = tbody.id === "notice-tbody" ? "notices"
+                : tbody.id === "shortage-tbody" ? "shortages" : "tasks";
+
+  /* 添付ファイルも削除 */
+  if (tbody.id === "notice-tbody") {
+    const files = JSON.parse(tr.dataset.files || "[]");
+    for (const f of files) if(f.path) await deleteFile(f.path);
+  }
+  try { await deleteDoc(doc(db, colName, docId)); }
+  catch(e){ console.error(e); }
+};
+
+/* ================================================
+   不足テキスト リアルタイム購読
+================================================ */
+let shortageUnsub = null;
+function subscribeShortages() {
+  if (shortageUnsub) shortageUnsub();
+  const q = query(shortagesCol, orderBy("createdAt","asc"));
+  shortageUnsub = onSnapshot(q, snap => {
+    const tbody = document.getElementById("shortage-tbody");
+    tbody.innerHTML = "";
+    if (snap.empty) { addShortageRow(); return; }
+    snap.forEach(d => { const tr=document.createElement("tr"); tr.dataset.docId=d.id; renderShortageRowView(tr, d.data()); tbody.appendChild(tr); });
+  });
+}
+
+function renderShortageRowView(tr,d){
+  tr.innerHTML=`${makeActionCell(false,"")}
+    <td><div class="view-val">${escHtml(formatDateShort(d.date||""))}</div></td>
+    <td><div class="view-val">${escHtml(d.text||"")}</div></td>
+    <td><div class="view-val" style="text-align:center;">${escHtml(String(d.count??""))}</div></td>`;
+}
+function renderShortageRowEdit(tr,d){
+  tr.innerHTML=`${makeActionCell(true,"handleSaveShortageRow")}
+    <td><input type="date"   value="${escHtml(d.date||todayString())}"></td>
+    <td><input type="text"   value="${escHtml(d.text||"")}" placeholder="テキスト名"></td>
+    <td><input type="number" value="${escHtml(String(d.count??""))}" min="0"></td>`;
+}
+function getShortageRowData(tr){
+  const tds=tr.querySelectorAll("td"), isEdit=!!tr.querySelector(".btn-save-ico");
+  if(isEdit){const i=tr.querySelectorAll("input");return{date:i[0]?.value||"",text:i[1]?.value||"",count:i[2]?.value||""};}
+  return{date:tds[1]?.querySelector(".view-val")?.textContent.trim()||"",text:tds[2]?.querySelector(".view-val")?.textContent.trim()||"",count:tds[3]?.querySelector(".view-val")?.textContent.trim()||""};
+}
+
+window.addShortageRow = async function() {
+  const tbody = document.getElementById("shortage-tbody");
+  const tr    = document.createElement("tr");
+  tr.dataset.docId = "__new__";
+  renderShortageRowEdit(tr, { date:todayString(), text:"", count:"" });
+  tbody.appendChild(tr);
+};
+window.handleSaveShortageRow = async function(btn) {
+  const tr    = btn.closest("tr");
+  const docId = tr.dataset.docId;
+  const d     = getShortageRowData(tr);
+  try {
+    if (docId === "__new__") await addDoc(shortagesCol, { ...d, createdAt: serverTimestamp() });
+    else await updateDoc(doc(db,"shortages",docId), d);
+  } catch(e){ console.error(e); }
+};
+
+/* ================================================
+   タスク リアルタイム購読
+================================================ */
+let taskUnsub = null;
+function subscribeTasks() {
+  if (taskUnsub) taskUnsub();
+  const q = query(tasksCol, orderBy("createdAt","asc"));
+  taskUnsub = onSnapshot(q, snap => {
+    const tbody = document.getElementById("task-tbody");
+    tbody.innerHTML = "";
+    if (snap.empty) { addTaskRow(); return; }
+    snap.forEach(d => { const tr=document.createElement("tr"); tr.dataset.docId=d.id; if(d.data().done)tr.classList.add("task-completed"); renderTaskRowView(tr, d.data()); tbody.appendChild(tr); });
+  });
+}
+
+function renderTaskRowView(tr,d){
+  if(d.done)tr.classList.add("task-completed"); else tr.classList.remove("task-completed");
+  tr.innerHTML=`${makeActionCell(false,"")}
+    <td><div class="view-val">${escHtml(formatDateShort(d.date||""))}</div></td>
+    <td><div class="view-val">${escHtml(d.item||"")}</div></td>
+    <td class="task-done"><input type="checkbox" ${d.done?"checked":""} onchange="toggleTaskDone(this)"></td>`;
+}
+function renderTaskRowEdit(tr,d){
+  tr.innerHTML=`${makeActionCell(true,"handleSaveTaskRow")}
+    <td><input type="date" value="${escHtml(d.date||todayString())}"></td>
+    <td><input type="text" value="${escHtml(d.item||"")}" placeholder="タスク内容"></td>
+    <td class="task-done"><input type="checkbox" ${d.done?"checked":""}></td>`;
+}
+function getTaskRowData(tr){
+  const tds=tr.querySelectorAll("td"), isEdit=!!tr.querySelector(".btn-save-ico");
+  if(isEdit){const i=tr.querySelectorAll("input");return{date:i[0]?.value||"",item:i[1]?.value||"",done:i[2]?.checked??false};}
+  return{date:tds[1]?.querySelector(".view-val")?.textContent.trim()||"",item:tds[2]?.querySelector(".view-val")?.textContent.trim()||"",done:tds[3]?.querySelector("input[type=checkbox]")?.checked??false};
+}
+
+window.addTaskRow = async function() {
+  const tbody = document.getElementById("task-tbody");
+  const tr    = document.createElement("tr");
+  tr.dataset.docId = "__new__";
+  renderTaskRowEdit(tr, { date:todayString(), item:"", done:false });
+  tbody.appendChild(tr);
+};
+window.handleSaveTaskRow = async function(btn) {
+  const tr    = btn.closest("tr");
+  const docId = tr.dataset.docId;
+  const d     = getTaskRowData(tr);
+  try {
+    if (docId === "__new__") await addDoc(tasksCol, { ...d, createdAt: serverTimestamp() });
+    else await updateDoc(doc(db,"tasks",docId), d);
+  } catch(e){ console.error(e); }
+};
+window.toggleTaskDone = async function(chk) {
+  const tr    = chk.closest("tr");
+  const docId = tr.dataset.docId;
+  tr.classList.toggle("task-completed", chk.checked);
+  if (docId && docId !== "__new__") {
+    try { await updateDoc(doc(db,"tasks",docId), { done: chk.checked }); } catch(e){ console.error(e); }
+  }
+};
+
+/* ================================================
+   初期化
+================================================ */
+buildNoticeHeader();
+subscribeNotices();
+subscribeShortages();
+subscribeTasks();
+</script>
+</body>
+</html>
