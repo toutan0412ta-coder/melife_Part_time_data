@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>講座情報</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Meiryo', sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== カテゴリメニュー ===== */
+    .category-bar {
+      background: #1a73e8;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      flex-shrink: 0;
+    }
+    .category-label {
+      color: rgba(255,255,255,.85);
+      font-size: .8rem;
+      font-weight: 700;
+      white-space: nowrap;
+      margin-right: 4px;
+    }
+    .menu-btn {
+      background: rgba(255,255,255,.15);
+      color: white;
+      border: 2px solid rgba(255,255,255,.4);
+      border-radius: 6px;
+      padding: 6px 13px;
+      font-size: .83rem;
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .menu-btn:hover  { background: rgba(255,255,255,.3); border-color: white; }
+    .menu-btn.active { background: white; color: #1a73e8; border-color: white; font-weight: 700; }
+
+    /* ===== ステータスバー ===== */
+    .status-bar {
+      background: #e8f0fe;
+      border-bottom: 1px solid #c5d5f5;
+      padding: 5px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      font-size: .78rem;
+      flex-shrink: 0;
+    }
+    .csv-badge { display: none; }
+    #reload-btn {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 3px 12px;
+      font-size: .75rem;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    #reload-btn:hover    { background: #1558b0; }
+    #reload-btn:disabled { background: #aab; cursor: not-allowed; }
+    #load-status { font-size: .76rem; color: #666; font-style: italic; }
+
+    /* ===== メインレイアウト ===== */
+    .main-wrapper { display: flex; flex: 1; overflow: hidden; }
+
+    /* ===== サイドバー ===== */
+    .sidebar {
+      width: 250px;
+      min-width: 210px;
+      background: white;
+      border-right: 1px solid #dde3ed;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      background: #f8f9ff;
+      border-bottom: 2px solid #e3e8f0;
+      padding: 9px 13px;
+      font-size: .83rem;
+      font-weight: 700;
+      color: #1a73e8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .count-badge {
+      background: #1a73e8;
+      color: white;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: .73rem;
+      margin-left: auto;
+    }
+    .search-box {
+      padding: 9px 11px;
+      border-bottom: 1px solid #e3e8f0;
+      background: #fafbff;
+    }
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      background: white;
+      border: 1.5px solid #c5d5f5;
+      border-radius: 20px;
+      padding: 5px 11px;
+      gap: 5px;
+      transition: border-color .2s;
+    }
+    .search-input-wrap:focus-within {
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26,115,232,.15);
+    }
+    .search-icon  { font-size: .83rem; color: #aab; }
+    .search-input {
+      border: none; outline: none; font-size: .83rem;
+      width: 100%; background: transparent; color: #333;
+    }
+    .search-clear {
+      background: none; border: none; cursor: pointer;
+      color: #aab; font-size: .95rem; padding: 0; line-height: 1; display: none;
+    }
+    .search-clear.visible { display: block; }
+    .search-clear:hover { color: #e53935; }
+    .course-list { flex: 1; overflow-y: auto; padding: 5px 0; }
+    .course-list::-webkit-scrollbar { width: 5px; }
+    .course-list::-webkit-scrollbar-thumb { background: #c5d5f5; border-radius: 3px; }
+    .course-item {
+      padding: 8px 15px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+      font-size: .85rem;
+      line-height: 1.4;
+    }
+    .course-item:hover    { background: #f0f4ff; border-left-color: #90aee8; }
+    .course-item.selected { background: #e8f0fe; border-left-color: #1a73e8; font-weight: 600; color: #1a73e8; }
+    .match-badge {
+      display: inline-block;
+      font-size: .63rem;
+      padding: 1px 5px;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+      font-weight: 700;
+    }
+    .match-badge.name    { background: #e3f2fd; color: #1565c0; }
+    .match-badge.unit    { background: #e8f5e9; color: #2e7d32; }
+    .match-badge.keyword { background: #f3e5f5; color: #6a1b9a; }
+    .highlight  { background: #fff176; border-radius: 2px; padding: 0 1px; }
+    .no-courses { padding: 28px 14px; text-align: center; color: #999; font-size: .83rem; line-height: 1.7; }
+
+    /* ===== 詳細エリア ===== */
+    .detail-area { flex: 1; overflow-y: auto; padding: 20px 26px; }
+    .detail-area::-webkit-scrollbar { width: 6px; }
+    .detail-area::-webkit-scrollbar-thumb { background: #c5d5f5; border-radius: 3px; }
+    .welcome {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; color: #aab; text-align: center; gap: 12px;
+    }
+    .welcome .icon { font-size: 3.5rem; }
+    .welcome p { font-size: .95rem; line-height: 1.8; }
+
+    /* ===== 詳細カード ===== */
+    .detail-card {
+      background: white; border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      overflow: hidden; max-width: 800px;
+    }
+    .detail-card-header {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: white; padding: 20px 26px;
+    }
+    .category-tag {
+      background: rgba(255,255,255,.25); border-radius: 20px;
+      padding: 3px 12px; font-size: .76rem;
+      margin-bottom: 7px; display: inline-block;
+    }
+    .detail-card-header h2 { font-size: 1.38rem; font-weight: 700; line-height: 1.4; }
+    .detail-body { padding: 22px 26px; display: flex; flex-direction: column; gap: 14px; }
+    .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .info-item {
+      background: #f8f9ff; border-radius: 8px;
+      padding: 13px 16px; border-left: 4px solid #1a73e8;
+    }
+    .info-label {
+      font-size: .7rem; color: #1a73e8; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px;
+    }
+    .info-value { font-size: .9rem; color: #333; line-height: 1.6; }
+    .info-value.empty { color: #bbb; font-style: italic; font-size: .86rem; }
+    .required-divider { margin: 9px 0 7px; border: none; border-top: 1px dashed #c5d5f5; }
+    .required-sub-label {
+      font-size: .68rem; color: #e67e00; font-weight: 700;
+      letter-spacing: .05em; margin-bottom: 5px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .course-link-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .course-link-list li {
+      display: flex; align-items: center; gap: 7px;
+      font-size: .88rem; color: #1a73e8; cursor: pointer;
+      padding: 3px 5px; border-radius: 4px;
+      transition: background .15s; line-height: 1.4;
+    }
+    .course-link-list li:hover      { background: #e8f0fe; text-decoration: underline; }
+    .course-link-list li::before    { content: '✦'; font-size: .68rem; flex-shrink: 0; }
+    .course-link-list.required2 li  { color: #c0392b; }
+    .course-link-list.required2 li:hover   { background: #fdecea; }
+    .course-link-list.required2 li::before { content: '◆'; color: #c0392b; }
+    .course-link-list.recommend li  { color: #2e7d32; }
+    .course-link-list.recommend li:hover   { background: #e8f5e9; }
+    .course-link-list.recommend li::before { content: '★'; color: #2e7d32; }
+    .note-box {
+      background: #fff8e1; border: 1px solid #ffe082;
+      border-left: 4px solid #ffc107; border-radius: 8px; padding: 13px 16px;
+    }
+    .note-box .info-label { color: #e67e00; }
+    .note-box .info-value { color: #555; }
+    .section-title {
+      font-size: .97rem; font-weight: 700; color: #1a73e8;
+      border-bottom: 2px solid #e3e8f0; padding-bottom: 7px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .unit-accordion { border: 1px solid #e3e8f0; border-radius: 10px; overflow: hidden; }
+    .unit-accordion + .unit-accordion { margin-top: 7px; }
+    .unit-header {
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 16px; background: #f0f4ff;
+      cursor: pointer; user-select: none; transition: background .15s;
+    }
+    .unit-header:hover { background: #e4ecff; }
+    .unit-number-badge {
+      background: #1a73e8; color: white; border-radius: 50%;
+      width: 25px; height: 25px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .76rem; font-weight: 700; flex-shrink: 0;
+    }
+    .unit-title-text { font-size: .92rem; font-weight: 600; color: #1a1a2e; flex: 1; }
+    .unit-chevron    { font-size: .73rem; color: #888; transition: transform .25s; flex-shrink: 0; }
+    .unit-accordion.open .unit-chevron { transform: rotate(180deg); }
+    .unit-body { display: none; background: white; border-top: 1px solid #e3e8f0; }
+    .unit-accordion.open .unit-body { display: block; }
+    .lesson-row {
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 9px 18px 9px 22px;
+      border-bottom: 1px solid #f0f4f8; transition: background .1s;
+    }
+    .lesson-row:last-child { border-bottom: none; }
+    .lesson-row:hover      { background: #fafbff; }
+    .lesson-num {
+      font-size: .73rem; font-weight: 700; color: #888;
+      white-space: nowrap; min-width: 32px; margin-top: 2px;
+    }
+    .lesson-content    { flex: 1; }
+    .lesson-title-text { font-size: .88rem; font-weight: 600; color: #333; margin-bottom: 3px; }
+    .lesson-row.quiz-row { background: #fffde7; }
+    .lesson-row.quiz-row:hover            { background: #fff9c4; }
+    .lesson-row.quiz-row .lesson-title-text { color: #e67e00; }
+    .quiz-desc    { font-size: .78rem; color: #888; margin-top: 2px; }
+    .keyword-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .keyword-tag  {
+      background: #e8f0fe; color: #1a73e8; border-radius: 12px;
+      padding: 2px 9px; font-size: .73rem; border: 1px solid #c5d5f5;
+    }
+    .keyword-tag.hit {
+      background: #fff176; color: #5d4037;
+      border-color: #f9a825; font-weight: 700;
+    }
+    .no-detail-note {
+      padding: 14px 18px; text-align: center;
+      color: #bbb; font-size: .83rem; font-style: italic;
+    }
+
+    /* ===== ローディングオーバーレイ ===== */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,.85);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; z-index: 999;
+      font-size: .95rem; color: #1a73e8; font-weight: 600;
+    }
+    .spinner {
+      width: 38px; height: 38px;
+      border: 4px solid #c5d5f5;
+      border-top-color: #1a73e8;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-overlay.hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ローディングオーバーレイ -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <span>CSVデータを読み込み中...</span>
+</div>
+
+<!-- カテゴリメニュー -->
+<div class="category-bar">
+  <span class="category-label">📂 カテゴリ：</span>
+  <button class="menu-btn" data-category="PC入門講座">💻 PC入門</button>
+  <button class="menu-btn" data-category="Office講座">📊 Office</button>
+  <button class="menu-btn" data-category="趣味講座">🎨 趣味</button>
+  <button class="menu-btn" data-category="ネット・モバイル講座">📱 ネット・モバイル</button>
+  <button class="menu-btn" data-category="資格・実務">🏆 資格・実務</button>
+</div>
+
+<!-- ステータスバー -->
+<div class="status-bar">
+  <span class="csv-badge" id="badge-courses"></span>
+  <span class="csv-badge" id="badge-units"></span>
+  <span class="csv-badge" id="badge-lessons"></span>
+  <span class="csv-badge" id="badge-keywords"></span>
+  <span id="load-status"></span>
+  <button id="reload-btn" onclick="loadAllCSV()" disabled>🔄 再読込</button>
+</div>
+
+<!-- メインコンテンツ -->
+<div class="main-wrapper">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      📋 講座一覧
+      <span class="count-badge" id="course-count">0</span>
+    </div>
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" id="search-input"
+               placeholder="講座名・単元・キーワードで検索..." autocomplete="off"/>
+        <button class="search-clear" id="search-clear" title="クリア">✕</button>
+      </div>
+    </div>
+    <div class="course-list" id="course-list">
+      <div class="no-courses">データを読み込み中...</div>
+    </div>
+  </aside>
+
+  <main class="detail-area" id="detail-area">
+    <div class="welcome">
+      <div class="icon">🎓</div>
+      <p>カテゴリを選択し、<br>講座をクリックすると詳細が表示されます。</p>
+    </div>
+  </main>
+</div>
+
+<script>
+"use strict";
+
+/* ================================================
+   CSV パス設定
+================================================ */
+const CSV_PATHS = {
+  courses:  'data/courses.csv',
+  units:    'data/units.csv',
+  lessons:  'data/lessons.csv',
+  keywords: 'data/keywords.csv',
+};
+
+/* ================================================
+   状態管理
+================================================ */
+let db = { courses: [], units: [], lessons: [], keywords: [] };
+let currentCategory = null;
+let searchQuery     = '';
+
+/* ================================================
+   CSVパーサー（BOM・RFC4180対応）
+================================================ */
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = [];
+  let row = [], field = '', inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i], nx = text[i + 1];
+    if (inQuote) {
+      if      (ch === '"' && nx === '"') { field += '"'; i++; }
+      else if (ch === '"')               { inQuote = false; }
+      else                               { field += ch; }
+    } else {
+      if      (ch === '"')                { inQuote = true; }
+      else if (ch === ',')                { row.push(field); field = ''; }
+      else if (ch === '\r' && nx === '\n'){ row.push(field); rows.push(row); row=[]; field=''; i++; }
+      else if (ch === '\n' || ch === '\r'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else                                { field += ch; }
+    }
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1)
+    .filter(r => r.some(v => v !== ''))
+    .map(r => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
+      return obj;
+    });
+}
+
+/* ================================================
+   XSSエスケープ／ハイライト
+================================================ */
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function highlight(text, query) {
+  if (!query) return esc(text);
+  const safe = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return esc(text).replace(new RegExp(safe, 'gi'), m => `<span class="highlight">${m}</span>`);
+}
+
+/* ================================================
+   CSV 読み込み
+================================================ */
+async function fetchCSV(type) {
+  try {
+    const res = await fetch(CSV_PATHS[type] + '?t=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    db[type] = parseCSV(await res.text());
+    return true;
+  } catch(err) {
+    db[type] = [];
+    console.warn(`[CSV] ${type} 読込失敗:`, err.message);
+    return false;
+  }
+}
+
+async function loadAllCSV() {
+  const overlay    = document.getElementById('loading-overlay');
+  const reloadBtn  = document.getElementById('reload-btn');
+  overlay.classList.remove('hidden');
+  reloadBtn.disabled = true;
+
+  const results = await Promise.all([
+    fetchCSV('courses'), fetchCSV('units'),
+    fetchCSV('lessons'), fetchCSV('keywords'),
+  ]);
+
+  overlay.classList.add('hidden');
+  reloadBtn.disabled = false;
+
+  if (!results[0]) {
+    document.getElementById('detail-area').innerHTML = `
+      <div class="welcome">
+        <div class="icon">⚠️</div>
+        <p>CSVファイルの読み込みに失敗しました。<br>
+           <strong>ローカルサーバー経由</strong>でアクセスしているか確認してください。<br><br>
+           <small>起動例：<code>python -m http.server 8000</code></small></p>
+      </div>`;
+    return;
+  }
+  if (currentCategory) renderCourseList();
+}
+
+/* ================================================
+   講座名取得 / コースリンク生成
+================================================ */
+function getCourseNameById(id) {
+  const found = db.courses.find(c => c.course_id === id.trim());
+  return found ? found['講座名'] : id.trim();
+}
+
+function buildCourseLinks(rawIds, cssClass = '') {
+  const ids = rawIds ? rawIds.split(',').map(s => s.trim()).filter(Boolean) : [];
+  if (!ids.length) return '';
+  return `<ul class="course-link-list ${cssClass}">${
+    ids.map(id =>
+      `<li onclick="jumpToCourse('${esc(id)}')">${esc(getCourseNameById(id))}</li>`
+    ).join('')
+  }</ul>`;
+}
+
+/* ================================================
+   検索マッチング
+================================================ */
+function matchCourse(course, query) {
+  if (!query) return { matched: true, matchTypes: new Set() };
+  const q   = query.toLowerCase();
+  const cid = (course.course_id || '').trim();
+  const types = new Set();
+  if ((course['講座名'] || '').toLowerCase().includes(q)) types.add('name');
+  const courseUnits = db.units.filter(u => u.course_id === cid);
+  if (courseUnits.some(u => (u.unit_title || '').toLowerCase().includes(q))) types.add('unit');
+  const unitIds   = courseUnits.map(u => u.unit_id);
+  const lessons   = db.lessons.filter(l => unitIds.includes(l.unit_id));
+  const lessonIds = lessons.map(l => l.lesson_id);
+  const lessonHit = lessons.some(l => (l.lesson_title || '').toLowerCase().includes(q));
+  const kwHit     = db.keywords
+    .filter(k => lessonIds.includes(k.lesson_id))
+    .some(k => (k.keyword || '').toLowerCase().includes(q));
+  if (lessonHit || kwHit) types.add('keyword');
+  return { matched: types.size > 0, matchTypes: types };
+}
+
+/* ================================================
+   メニューボタン
+================================================ */
+document.querySelectorAll('.menu-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    currentCategory = this.dataset.category;
+    searchQuery = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-clear').classList.remove('visible');
+    renderCourseList();
+    renderDetail(null);
+  });
+});
+
+/* ================================================
+   検索ボックス
+================================================ */
+document.getElementById('search-input').addEventListener('input', function () {
+  searchQuery = this.value;
+  document.getElementById('search-clear').classList.toggle('visible', searchQuery.length > 0);
+  renderCourseList();
+  renderDetail(null);
+});
+document.getElementById('search-clear').addEventListener('click', function () {
+  searchQuery = '';
+  document.getElementById('search-input').value = '';
+  this.classList.remove('visible');
+  document.getElementById('search-input').focus();
+  renderCourseList();
+  renderDetail(null);
+});
+
+/* ================================================
+   講座一覧レンダリング
+================================================ */
+function renderCourseList() {
+  const listEl  = document.getElementById('course-list');
+  const countEl = document.getElementById('course-count');
+  const source  = db.courses.filter(c => (c['区分'] || '').trim() === currentCategory);
+  const filtered = source
+    .map(c => { const r = matchCourse(c, searchQuery); return { course: c, ...r }; })
+    .filter(r => r.matched);
+
+  countEl.textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = `<div class="no-courses">${
+      searchQuery
+        ? `「${esc(searchQuery)}」<br>に一致する講座はありません`
+        : '該当する講座がありません'
+    }</div>`;
+    return;
+  }
+
+  listEl.innerHTML = filtered.map((r, i) => {
+    const badges = [...r.matchTypes].map(t => {
+      const labels = { name:'講座名', unit:'単元', keyword:'キーワード' };
+      return `<span class="match-badge ${t}">${labels[t]}</span>`;
+    }).join('');
+    return `<div class="course-item" data-index="${i}">
+      ${highlight(r.course['講座名'] || '（名称未設定）', searchQuery)}${badges}
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.course-item').forEach(item => {
+    item.addEventListener('click', function () {
+      listEl.querySelectorAll('.course-item').forEach(el => el.classList.remove('selected'));
+      this.classList.add('selected');
+      renderDetail(filtered[parseInt(this.dataset.index)].course);
+    });
+  });
+}
+
+/* ================================================
+   他講座へジャンプ
+================================================ */
+function jumpToCourse(courseId) {
+  const target = db.courses.find(c => c.course_id === courseId);
+  if (!target) return;
+  const cat = (target['区分'] || '').trim();
+  document.querySelectorAll('.menu-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.category === cat);
+  });
+  currentCategory = cat;
+  searchQuery = '';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').classList.remove('visible');
+  renderCourseList();
+  const listEl   = document.getElementById('course-list');
+  const catItems = db.courses.filter(c => (c['区分'] || '').trim() === cat);
+  const idx      = catItems.findIndex(c => c.course_id === courseId);
+  const items    = listEl.querySelectorAll('.course-item');
+  if (idx >= 0 && items[idx]) {
+    items[idx].classList.add('selected');
+    items[idx].scrollIntoView({ block: 'nearest' });
+  }
+  renderDetail(target);
+}
+
+/* ================================================
+   詳細レンダリング
+================================================ */
+function renderDetail(course) {
+  const area = document.getElementById('detail-area');
+  if (!course) {
+    area.innerHTML = `
+      <div class="welcome">
+        <div class="icon">🎓</div>
+        <p>カテゴリを選択し、<br>講座をクリックすると詳細が表示されます。</p>
+      </div>`;
+    return;
+  }
+  const val      = key => (course[key] || '').trim();
+  const courseId = val('course_id');
+
+  const req1HTML = buildCourseLinks(val('必須講座'),  '');
+  const req2HTML = buildCourseLinks(val('必須講座2'), 'required2');
+  const hasReq1  = req1HTML !== '';
+  const hasReq2  = req2HTML !== '';
+  let requiredBlockHTML;
+  if      (!hasReq1 && !hasReq2) requiredBlockHTML = `<span class="info-value empty">なし</span>`;
+  else if ( hasReq1 && !hasReq2) requiredBlockHTML = req1HTML;
+  else if (!hasReq1 &&  hasReq2) requiredBlockHTML = req2HTML;
+  else requiredBlockHTML = `
+    ${req1HTML}<hr class="required-divider">
+    <div class="required-sub-label">🔀 または（別パターン）</div>${req2HTML}`;
+
+  const recHTML = buildCourseLinks(val('推奨講座'), 'recommend');
+  const recommendBlockHTML = recHTML || `<span class="info-value empty">なし</span>`;
+  const tokki = val('特記事項');
+
+  const units = db.units.filter(u => u.course_id === courseId);
+  let unitsHTML = '';
+  if (units.length === 0) {
+    unitsHTML = `<div class="no-detail-note">単元データがありません</div>`;
+  } else {
+    unitsHTML = units.map(u => {
+      const lessons = db.lessons.filter(l => l.unit_id === u.unit_id);
+      const lessonsHTML = lessons.length === 0
+        ? `<div class="no-detail-note">レッスンデータなし</div>`
+        : lessons.map(l => {
+            const isQuiz   = l.lesson_type === 'quiz';
+            const keywords = db.keywords.filter(k => k.lesson_id === l.lesson_id);
+            const q        = searchQuery.toLowerCase();
+            const kwHTML   = keywords.length
+              ? `<div class="keyword-tags">${keywords.map(k => {
+                    const isHit = q && (k.keyword || '').toLowerCase().includes(q);
+                    return `<span class="keyword-tag ${isHit ? 'hit' : ''}">${isHit ? highlight(k.keyword, searchQuery) : esc(k.keyword)}</span>`;
+                  }).join('')}</div>`
+              : '';
+            return `
+              <div class="lesson-row ${isQuiz ? 'quiz-row' : ''}">
+                <div class="lesson-num">${esc(l.lesson_number)}</div>
+                <div class="lesson-content">
+                  <div class="lesson-title-text">${highlight(l.lesson_title, searchQuery)}</div>
+                  ${isQuiz && l.quiz_description ? `<div class="quiz-desc">${esc(l.quiz_description)}</div>` : ''}
+                  ${kwHTML}
+                </div>
+              </div>`;
+          }).join('');
+
+      const q = searchQuery.toLowerCase();
+      const autoOpen = q && (
+        (u.unit_title || '').toLowerCase().includes(q) ||
+        lessons.some(l =>
+          (l.lesson_title || '').toLowerCase().includes(q) ||
+          db.keywords.filter(k => k.lesson_id === l.lesson_id)
+            .some(k => (k.keyword || '').toLowerCase().includes(q))
+        )
+      );
+      return `
+        <div class="unit-accordion ${autoOpen ? 'open' : ''}" id="unit-${esc(u.unit_id)}">
+          <div class="unit-header" onclick="toggleUnit('unit-${esc(u.unit_id)}')">
+            <div class="unit-number-badge">${esc(u.unit_number)}</div>
+            <div class="unit-title-text">${highlight(u.unit_title, searchQuery)}</div>
+            <span class="unit-chevron">▼</span>
+          </div>
+          <div class="unit-body">${lessonsHTML}</div>
+        </div>`;
+    }).join('');
+  }
+
+  area.innerHTML = `
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <div class="category-tag">📂 ${esc(val('区分')) || 'カテゴリ未設定'}</div>
+        <h2>${esc(val('講座名')) || '（講座名未設定）'}</h2>
+      </div>
+      <div class="detail-body">
+        <div class="info-row">
+          <div class="info-item">
+            <div class="info-label">📌 区分</div>
+            <div class="info-value">${esc(val('区分')) || '未設定'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">⏱ 標準受講時間</div>
+            <div class="info-value">${esc(val('標準受講時間')) || '未設定'}</div>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-item">
+            <div class="info-label">✅ 必須講座</div>
+            ${requiredBlockHTML}
+          </div>
+          <div class="info-item">
+            <div class="info-label">⭐ 推奨講座</div>
+            ${recommendBlockHTML}
+          </div>
+        </div>
+        <div class="note-box">
+          <div class="info-label">📝 特記事項</div>
+          <div class="info-value ${tokki ? '' : 'empty'}">${tokki ? esc(tokki) : 'なし'}</div>
+        </div>
+        <div class="section-title">📖 単元・レッスン構成</div>
+        ${unitsHTML}
+      </div>
+    </div>`;
+}
+
+/* ================================================
+   アコーディオン開閉
+================================================ */
+function toggleUnit(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+/* ================================================
+   起動時に自動読み込み
+================================================ */
+loadAllCSV();
+</script>
+</body>
+</html>
